@@ -22,8 +22,20 @@
 #include <freertos/timers.h>
 #include <string.h>
 
+#include "swbd.h"
+
 #define MAX_TOPIC_LEN 256
 static const char *TAG = "BLE2MQTT";
+
+const ble_uuid_t swbd_service =        {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe0, 0xff, 0x00, 0x00};
+const ble_uuid_t swbd_characteristic = {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe1, 0xff, 0x00, 0x00};
+
+const ble_uuid_t enable_charact =      {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe2, 0xff, 0x00, 0x00};
+const ble_uuid_t speed_charact =       {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe3, 0xff, 0x00, 0x00};
+const ble_uuid_t sensivity_charact =   {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe4, 0xff, 0x00, 0x00};
+const ble_uuid_t move_sensor_charact=  {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe5, 0xff, 0x00, 0x00}; 
+const ble_uuid_t hours_charact=        {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe6, 0xff, 0x00, 0x00}; 
+const ble_uuid_t minutes_charact=      {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe7, 0xff, 0x00, 0x00}; 
 
 typedef struct {
     mac_addr_t mac;
@@ -312,8 +324,8 @@ static void ble_publish_connected(mac_addr_t mac, uint8_t is_connected)
     }
 }
 
-static mqtt_ctx_t *ble_ctx_gen(mac_addr_t mac, ble_uuid_t service,
-    ble_uuid_t characteristic, uint8_t index)
+static mqtt_ctx_t *ble_ctx_gen(mac_addr_t mac, const ble_uuid_t service,
+    const ble_uuid_t characteristic, uint8_t index)
 {
     mqtt_ctx_t *ctx = malloc(sizeof(mqtt_ctx_t));
 
@@ -351,16 +363,21 @@ static void ble_on_broadcaster_discovered(mac_addr_t mac, uint8_t *adv_data,
     free(mac_str);
 }
 
-static void ble_on_device_discovered(mac_addr_t mac, int rssi)
+static void ble_on_device_discovered(mac_addr_t mac, char * name, size_t name_len, int rssi)  // by MK
 {
-    uint8_t connect = config_ble_should_connect(mactoa(mac));
 
-    ESP_LOGI(TAG, "Discovered BLE device: " MAC_FMT " (RSSI: %d), %sconnecting",
-        MAC_PARAM(mac), rssi, connect ? "" : "not ");
+    uint8_t connect = config_ble_should_connect(mactoa(mac), name);
+
+    //if ((strcmp(name,"SWBDdrv_mc5")==0)||(strcmp(name,"SWBDdrv_mc2")==0)) {connect=1;} else {connect=0;}
+
+    
+    ESP_LOGI(TAG, "Discovered BLE device: " MAC_FMT ", name: %s, (RSSI: %d), %sconnecting", // by MK
+        MAC_PARAM(mac), name, rssi, connect ? "" : "not ");
 
     if (!connect)
         return;
-
+    
+    
     ble_connect(mac);
 }
 
@@ -382,8 +399,8 @@ static char *ble_topic_suffix(char *base, uint8_t is_get)
     return topic;
 }
 
-static char *ble_topic(mac_addr_t mac, ble_uuid_t service_uuid,
-    ble_uuid_t characteristic_uuid, uint8_t index)
+static char *ble_topic(mac_addr_t mac, const ble_uuid_t service_uuid,
+    const ble_uuid_t characteristic_uuid, uint8_t index)
 {
     static char topic[MAX_TOPIC_LEN];
     int i = 0;
@@ -424,14 +441,161 @@ static void ble_on_mqtt_get(const char *topic, const uint8_t *payload,
 static void ble_on_mqtt_set(const char *topic, const uint8_t *payload,
     size_t len, void *ctx)
 {
-    ESP_LOGD(TAG, "Got write request: %s, len: %u", topic, len);
+    ESP_LOGI(TAG, "Got write request: %s, len: %u", topic, len);
     mqtt_ctx_t *data = (mqtt_ctx_t *)ctx;
     size_t buf_len;
     uint8_t *buf = atochar(data->characteristic, (const char *)payload,
         len, &buf_len);
 
-    ble_characteristic_write(data->mac, data->service, data->characteristic,
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, enable_charact)) // enable
+    {
+        ESP_LOGI(TAG, "ENABLE");
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            array[0]=(array[0] & ~((uint8_t)1 << 7)) | (buf[0] << 7);
+            array[2]=0xFF;
+            array[3]=0xFF;
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    }
+    else
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, speed_charact)) // speed
+    {
+        ESP_LOGI(TAG, "SPEED");
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            array[0]=(array[0] & (0b10000000)) | (buf[0]);
+            array[2]=0xFF;
+            array[3]=0xFF;
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    }
+    else
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, sensivity_charact)) // sensivity
+    {
+        ESP_LOGI(TAG, "SENSIVITY");
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            array[1]=(array[1] & (0b10000000)) | (buf[0]);
+            array[2]=0xFF;
+            array[3]=0xFF;
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    }
+    else
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, move_sensor_charact)) // move_sensor
+    {
+        ESP_LOGI(TAG, "MOVE SENSOR: " UUID_FMT "", UUID_PARAM(data->characteristic));
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            array[1]=(array[1] & ~((uint8_t)1 << 7)) | (buf[0] << 7);
+            array[2]=0xFF;
+            array[3]=0xFF;
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    }
+    else
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, hours_charact)) // hours
+    {
+        ESP_LOGI(TAG, "HOURS : " UUID_FMT "", UUID_PARAM(data->characteristic) );
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            uint16_t time=(uint16_t)((array[2]<<8)|(array[3]));
+           // uint8_t hours=time/60; 
+            uint8_t minutes=time%60; 
+            uint8_t new_hours=buf[0];
+            uint16_t new_time=new_hours*60+minutes;
+
+
+            array[2] = HI(new_time);
+			array[3] = LO(new_time);
+            
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    }
+    else
+    if (ble_uuid_equal(data->service, swbd_service)&&ble_uuid_equal(data->characteristic, minutes_charact)) // minutes
+    {
+        ESP_LOGI(TAG, "MINUTES : " UUID_FMT "", UUID_PARAM(data->characteristic) );
+        extern ble_device_t *devices_list;
+        ble_device_t *device=ble_device_find_by_mac(devices_list, data->mac);
+        if (device) 
+        {
+            uint8_t array[6];
+            memcpy(array, device->swbd_condition, sizeof(array));
+
+            uint16_t time=(uint16_t)((array[2]<<8)|(array[3]));
+            uint8_t hours=time/60; 
+           // uint8_t minutes=time%60; 
+            uint8_t new_minutes=buf[0];
+            uint16_t new_time=hours*60+new_minutes;
+
+
+            array[2] = HI(new_time);
+			array[3] = LO(new_time);
+            
+            array[5]=chsum(array);
+          
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(data->mac, swbd_service, swbd_characteristic, data->index, array, 6);        
+        }
+    } 
+    else
+    {
+        ESP_LOGI(TAG, "COMMON");
+        ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(data->mac), UUID_PARAM(data->service), UUID_PARAM(data->characteristic), SWBD_PARAM(buf));
+        ble_characteristic_write(data->mac, data->service, data->characteristic,
         data->index, buf, buf_len);
+    }
+    
+
+    
 
     /* Issue a read request to get latest value */
     ble_characteristic_read(data->mac, data->service, data->characteristic,
@@ -483,6 +647,66 @@ static void ble_on_characteristic_found(mac_addr_t mac, ble_uuid_t service_uuid,
         ble_characteristic_notify_register(mac, service_uuid,
             characteristic_uuid, index);
     }
+
+    /*Если это устройство качания, подписываемся на дополнительные топики*/
+    if ((memcmp(&swbd_service, service_uuid, 16)==0)&&((memcmp(&swbd_characteristic, characteristic_uuid, 16)==0))) 
+    {
+        // enable
+        char *topic_enable = ble_topic(mac, swbd_service, enable_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_enable, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            enable_charact, index), free);
+
+        // speed
+        char *topic_speed = ble_topic(mac, swbd_service, speed_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_speed, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            speed_charact, index), free);
+
+        // sensivity
+        char *topic_sensivity = ble_topic(mac, swbd_service, sensivity_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_sensivity, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            sensivity_charact, index), free);    
+
+        // move_sensor
+        char *topic_move_sensor = ble_topic(mac, swbd_service, move_sensor_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_move_sensor, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            move_sensor_charact, index), free);    
+        
+        //hours
+        char *topic_hours = ble_topic(mac, swbd_service, hours_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_hours, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            hours_charact, index), free);    
+
+        //minutes
+        char *topic_minutes = ble_topic(mac, swbd_service, minutes_charact, index);
+        mqtt_subscribe(ble_topic_suffix(topic_minutes, 0), config_mqtt_qos_get(),
+            _ble_on_mqtt_set, ble_ctx_gen(mac, swbd_service,
+            minutes_charact, index), free);    
+
+        
+        
+        // посылаем в устройство качания все нули, чтобы узнать его состояние
+            uint8_t array[6];
+         
+
+            array[0]=0;
+            array[1]=0;
+            array[2]=0;
+            array[3]=0;
+            array[4]=0;
+            array[5]=chsum(array);
+
+            ESP_LOGI(TAG, "Write to: " MAC_FMT " , service: " UUID_FMT ", characteristic: " UUID_FMT " buf: " SWBD_FMT "", MAC_PARAM(mac), UUID_PARAM(swbd_service), UUID_PARAM(swbd_characteristic), SWBD_PARAM(array));
+            ble_characteristic_write(mac, swbd_service, swbd_characteristic, index, array, 6);        
+            
+
+    }
+
+
 }
 
 static void ble_on_device_services_discovered(mac_addr_t mac)
@@ -558,6 +782,8 @@ typedef struct {
         } ble_broadcaster_discovered;
         struct {
             mac_addr_t mac;
+            char * name;                 // by MK
+            size_t name_len;  //by MK
             int rssi;
         } ble_device_discovered;
         struct {
@@ -626,7 +852,9 @@ static void ble2mqtt_handle_event(event_t *event)
         free(event->ble_broadcaster_discovered.adv_data);
         break;
     case EVENT_TYPE_BLE_DEVICE_DISCOVERED:
-        ble_on_device_discovered(event->ble_device_discovered.mac,
+        ble_on_device_discovered(event->ble_device_discovered.mac, 
+            event->ble_device_discovered.name, // by MK
+            event->ble_device_discovered.name_len,
             event->ble_device_discovered.rssi);
         break;
     case EVENT_TYPE_BLE_DEVICE_CONNECTED:
@@ -818,12 +1046,22 @@ static void _ble_on_broadcaster_discovered(mac_addr_t mac, uint8_t *adv_data,
     xQueueSend(event_queue, &event, portMAX_DELAY);
 }
 
-static void _ble_on_device_discovered(mac_addr_t mac, int rssi)
+static void _ble_on_device_discovered(mac_addr_t mac, char * name, size_t name_len, int rssi) // by MK
 {
     event_t *event = malloc(sizeof(*event));
 
     event->type = EVENT_TYPE_BLE_DEVICE_DISCOVERED;
     memcpy(event->ble_device_discovered.mac, mac, sizeof(mac_addr_t));
+    
+   if (name) {
+    ESP_LOGI(TAG, "name: %s, name_len: %d", name, name_len); // by MK
+    event->ble_device_discovered.name=malloc(name_len+1); 
+    memcpy(event->ble_device_discovered.name, name, name_len+1); 
+   } else {
+    event->ble_device_discovered.name="";
+   }
+    event->ble_device_discovered.name_len=name_len;
+
     event->ble_device_discovered.rssi = rssi;
 
     ESP_LOGD(TAG, "Queuing event BLE_DEVICE_DISCOVERED (" MAC_FMT ", %d)",
@@ -871,6 +1109,111 @@ static void _ble_on_device_characteristic_value(mac_addr_t mac,
     ble_uuid_t service, ble_uuid_t characteristic, uint8_t index,
     uint8_t *value, size_t value_len)
 {
+    
+    ble_device_t *device;                
+    extern ble_device_t *devices_list;
+    device = ble_device_find_by_mac(devices_list, mac);     // by MK
+    
+    
+    
+    /*От устройства качания пришло его состояние, сохраняем это состояние и публикуем его отдельные параметры*/                                            
+    if ((memcmp(&swbd_service, service, 16)==0)&&((memcmp(&swbd_characteristic, characteristic, 16)==0))) {
+        // сохраняем состояние устройства качания
+        memcpy(device->swbd_condition, value, sizeof(device->swbd_condition));
+        ESP_LOGI(TAG, "Saved SWBD cond: " SWBD_FMT "", SWBD_PARAM(device->swbd_condition));
+
+        // ставим в очередь публикацию состояние "запущено ли качание"
+        event_t *enable_event = malloc(sizeof(*enable_event));
+        enable_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(enable_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(enable_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(enable_event->ble_device_characteristic_value.characteristic, enable_charact, sizeof(ble_uuid_t));
+
+        uint8_t enable_value=get_swbd_enable(value);
+        enable_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(enable_event->ble_device_characteristic_value.value, &enable_value, 1);
+        enable_event->ble_device_characteristic_value.value_len = 1;
+        enable_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &enable_event, portMAX_DELAY);
+
+
+        // ставим в очередь публикацию скорости
+        event_t *speed_event = malloc(sizeof(*speed_event));
+        speed_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(speed_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(speed_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(speed_event->ble_device_characteristic_value.characteristic, speed_charact, sizeof(ble_uuid_t));
+
+        uint8_t speed_value=get_swbd_speed(value);
+        speed_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(speed_event->ble_device_characteristic_value.value, &speed_value, 1);
+        speed_event->ble_device_characteristic_value.value_len = 1;
+        speed_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &speed_event, portMAX_DELAY);
+
+        // ставим в очередь публикацию чувствительности микрофона
+        event_t *sensivity_event = malloc(sizeof(*sensivity_event));
+        sensivity_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(sensivity_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(sensivity_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(sensivity_event->ble_device_characteristic_value.characteristic, sensivity_charact, sizeof(ble_uuid_t));
+
+        uint8_t sensivity_value=get_swbd_sensivity(value);
+        sensivity_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(sensivity_event->ble_device_characteristic_value.value, &sensivity_value, 1);
+        sensivity_event->ble_device_characteristic_value.value_len = 1;
+        sensivity_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &sensivity_event, portMAX_DELAY);
+
+        // ставим в очередь публикацию состояния датчика движения
+        event_t *move_sensor_event = malloc(sizeof(*move_sensor_event));
+        move_sensor_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(move_sensor_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(move_sensor_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(move_sensor_event->ble_device_characteristic_value.characteristic, move_sensor_charact, sizeof(ble_uuid_t));
+
+        uint8_t move_sensor_value=get_swbd_move_sensor(value);
+        move_sensor_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(move_sensor_event->ble_device_characteristic_value.value, &move_sensor_value, 1);
+        move_sensor_event->ble_device_characteristic_value.value_len = 1;
+        move_sensor_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &move_sensor_event, portMAX_DELAY);    
+
+        // ставим в очередь публикацию количества часов
+        event_t *hours_event = malloc(sizeof(*hours_event));
+        hours_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(hours_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(hours_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(hours_event->ble_device_characteristic_value.characteristic, hours_charact, sizeof(ble_uuid_t));
+
+        uint8_t hours_value=get_swbd_hours(value);
+        hours_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(hours_event->ble_device_characteristic_value.value, &hours_value, 1);
+        hours_event->ble_device_characteristic_value.value_len = 1;
+        hours_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &hours_event, portMAX_DELAY);    
+        
+        // ставим в очередь публикацию количества минут
+        event_t *minutes_event = malloc(sizeof(*minutes_event));
+        minutes_event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;
+        memcpy(minutes_event->ble_device_characteristic_value.mac, mac, sizeof(mac_addr_t));
+        memcpy(minutes_event->ble_device_characteristic_value.service, service, sizeof(ble_uuid_t)); 
+        memcpy(minutes_event->ble_device_characteristic_value.characteristic, minutes_charact, sizeof(ble_uuid_t));
+
+        uint8_t minutes_value=get_swbd_minutes(value);
+        minutes_event->ble_device_characteristic_value.value = malloc(1);
+        memcpy(minutes_event->ble_device_characteristic_value.value, &minutes_value, 1);
+        minutes_event->ble_device_characteristic_value.value_len = 1;
+        minutes_event->ble_device_characteristic_value.index = index;
+
+        xQueueSend(event_queue, &minutes_event, portMAX_DELAY);    
+    }
+
     event_t *event = malloc(sizeof(*event));
 
     event->type = EVENT_TYPE_BLE_DEVICE_CHARACTERISTIC_VALUE;

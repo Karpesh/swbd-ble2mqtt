@@ -60,7 +60,9 @@ typedef struct ble_operation_t {
 /* Internal state */
 static uint8_t scan_requested = 0;
 static esp_gatt_if_t g_gattc_if = ESP_GATT_IF_NONE;
-static ble_device_t *devices_list = NULL;
+/*Список всех девайсов*/
+ble_device_t *devices_list = NULL;
+
 static ble_operation_t *operation_queue = NULL;
 static TimerHandle_t purge_device_list_timer = NULL;
 static SemaphoreHandle_t devices_list_semaphore = NULL;
@@ -514,8 +516,8 @@ Exit:
     return ret;
 }
 
-int ble_characteristic_write(mac_addr_t mac, ble_uuid_t service_uuid,
-    ble_uuid_t characteristic_uuid, uint8_t index, const uint8_t *value,
+int ble_characteristic_write(mac_addr_t mac, const ble_uuid_t service_uuid,
+    const ble_uuid_t characteristic_uuid, uint8_t index, const uint8_t *value,
     size_t value_len)
 {
     ble_device_t *device;
@@ -532,7 +534,7 @@ int ble_characteristic_write(mac_addr_t mac, ble_uuid_t service_uuid,
         goto Exit;
 
     if (!(characteristic = ble_device_characteristic_find_by_uuid(service,
-        characteristic_uuid, index)))
+         characteristic_uuid, index)))
     {
         goto Exit;
     }
@@ -667,16 +669,19 @@ static char *ble_device_name_get(uint8_t *adv_data)
     uint8_t len;
     uint8_t *data;
 
+        
+
     if (!(data = esp_ble_resolve_adv_data(adv_data, ESP_BLE_AD_TYPE_NAME_CMPL,
         &len)))
-    {
+    {   
         if (!(data = esp_ble_resolve_adv_data(adv_data,
             ESP_BLE_AD_TYPE_NAME_SHORT, &len)))
         {
             return NULL;
         }
     }
-
+    
+ //   ESP_LOGI(TAG, "name: %s", esp_ble_resolve_adv_data(adv_data, ESP_BLE_AD_TYPE_NAME_CMPL,&len));
     strncpy(name, (char *)data, len);
     name[len] = '\0';
     return name;
@@ -719,7 +724,7 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
         /* If scan was stopped before this device was found, ignore it */
         if (!scan_requested)
             break;
-
+    
         if (param->scan_rst.search_evt != ESP_GAP_SEARCH_INQ_RES_EVT)
             break;
 
@@ -742,8 +747,19 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
         if (device)
         {
             /* Update name, if none was available */
-            if (!device->name && name)
+            if (!device->name && name) {
                 ble_device_update_name(device, name);
+                ESP_LOGI(TAG, "!!!!!!!!name updated: %s", name);
+                /* Notify app if name updated //by MK */
+                // если не подключен, то notify app if name updated
+                if ((on_device_discovered_cb)&&(device->conn_id==0xffff))
+                    {           
+                        size_t name_len;
+                        if (!name) {name_len=0;} else {name_len=strlen(name);}
+                      //  if (name) {ESP_LOGI(TAG, "name: %s, name_len: %d", name, name_len);} else {ESP_LOGI(TAG, "name: %s, name_len: %d", "no name!", name_len);} // by MK
+                        on_device_discovered_cb(param->scan_rst.bda, name, name_len, param->scan_rst.rssi); // added by MK
+                    }
+            }
 
             xSemaphoreGiveRecursive(devices_list_semaphore);
             break;
@@ -757,8 +773,19 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
         xSemaphoreGiveRecursive(devices_list_semaphore);
 
         /* Notify app only on newly connected devices */
-        if(on_device_discovered_cb)
-            on_device_discovered_cb(param->scan_rst.bda, param->scan_rst.rssi);
+      //  device = ble_device_find_by_mac(devices_list, param->scan_rst.bda);
+      //  if (!device) 
+        {
+        if (on_device_discovered_cb)
+           {           
+           size_t name_len;
+           if (!name) {name_len=0;} else {name_len=strlen(name);}
+          //  if (name) {ESP_LOGI(TAG, "name: %s, name_len: %d", name, name_len);} else {ESP_LOGI(TAG, "name: %s, name_len: %d", "no name!", name_len);} // by MK
+            on_device_discovered_cb(param->scan_rst.bda, name, name_len, param->scan_rst.rssi); // added by MK
+           }
+        }
+
+           
 
         break;
     }

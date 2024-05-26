@@ -181,10 +181,16 @@ uint8_t config_ble_service_should_include(const char *uuid)
     return json_is_in_lists(services, uuid);
 }
 
-uint8_t config_ble_should_connect(const char *mac)
+uint8_t config_ble_should_connect(const char *mac, const char *name)
 {
-    cJSON *ble = cJSON_GetObjectItemCaseSensitive(config, "ble");
-    return json_is_in_lists(ble, mac);
+    cJSON *ble_mac = cJSON_GetObjectItemCaseSensitive(config, "ble_mac");
+    cJSON *ble_name = cJSON_GetObjectItemCaseSensitive(config, "ble_name");
+
+    if (ble_name)
+    return json_is_in_lists(ble_name, name);
+
+    
+    return json_is_in_lists(ble_mac, mac);
 }
 
 uint32_t config_ble_passkey_get(const char *mac)

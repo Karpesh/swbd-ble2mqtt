@@ -7,6 +7,9 @@
 #define MAC_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_PARAM(mac) mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
 
+#define SWBD_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define SWBD_PARAM(swbd) swbd[0], swbd[1], swbd[2], swbd[3], swbd[4], swbd[5]
+
 #define UUID_FMT \
     "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"
 #define UUID_PARAM(uuid) \
@@ -43,6 +46,7 @@ typedef struct ble_device_t {
     uint16_t conn_id;
     ble_service_t *services;
     uint8_t is_authenticating;
+    uint8_t swbd_condition[6];         //by MK
 } ble_device_t;
 
 /* Callback functions */
@@ -55,14 +59,14 @@ char *gattc_event_to_str(esp_gattc_cb_event_t event);
 /* Conversion functions */
 char *mactoa(mac_addr_t mac);
 int atomac(const char *str, mac_addr_t mac);
-char *uuidtoa(ble_uuid_t uuid);
+char *uuidtoa(const ble_uuid_t uuid);
 int atouuid(const char *str, ble_uuid_t uuid);
 char *chartoa(ble_uuid_t uuid, const uint8_t *data, size_t len);
 uint8_t *atochar(ble_uuid_t uuid, const char *data, size_t len,
     size_t *ret_len);
 
-const char *ble_service_name_get(ble_uuid_t uuid);
-const char *ble_characteristic_name_get(ble_uuid_t uuid);
+const char *ble_service_name_get(const ble_uuid_t uuid);
+const char *ble_characteristic_name_get(const ble_uuid_t uuid);
 
 /* Devices list */
 ble_device_t *ble_device_add(ble_device_t **list, const char *name,
@@ -78,20 +82,20 @@ void ble_device_free(ble_device_t *device);
 void ble_devices_free(ble_device_t **list);
 
 ble_service_t *ble_device_service_add(ble_device_t *device, ble_uuid_t uuid);
-ble_service_t *ble_device_service_find(ble_device_t *device, ble_uuid_t uuid);
+ble_service_t *ble_device_service_find(ble_device_t *device, const ble_uuid_t uuid);
 void ble_device_service_free(ble_service_t *service);
 void ble_device_services_free(ble_service_t **list);
 
 ble_characteristic_t *ble_device_characteristic_add(ble_service_t *service,
     ble_uuid_t uuid, uint8_t index, uint16_t handle, uint8_t properties);
 ble_characteristic_t *ble_device_characteristic_find_by_uuid(
-    ble_service_t *service, ble_uuid_t uuid, uint8_t index);
+    ble_service_t *service, const ble_uuid_t uuid, uint8_t index);
 ble_characteristic_t *ble_device_characteristic_find_by_handle(
     ble_service_t *service, uint16_t handle);
 void ble_device_characteristic_free(ble_characteristic_t *characteristic);
 void ble_device_characteristics_free(ble_characteristic_t **list);
 
-bool ble_uuid_equal(ble_uuid_t uuid1, ble_uuid_t uuid2);
+bool ble_uuid_equal(const ble_uuid_t uuid1, const ble_uuid_t uuid2);
 bool ble_mac_equal(mac_addr_t mac1, mac_addr_t mac2);
 
 int ble_device_info_get_by_conn_id_handle(ble_device_t *list, uint16_t conn_id,

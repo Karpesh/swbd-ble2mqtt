@@ -106,7 +106,7 @@ int atomac(const char *str, mac_addr_t mac)
         &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6;
 }
 
-char *uuidtoa(ble_uuid_t uuid)
+char *uuidtoa(const ble_uuid_t uuid)
 {
     static char s[37];
 
@@ -127,7 +127,7 @@ int atouuid(const char *str, ble_uuid_t uuid)
         &uuid[5], &uuid[4], &uuid[3], &uuid[2], &uuid[1], &uuid[0]) != 16;
 }
 
-bool ble_uuid_equal(ble_uuid_t uuid1, ble_uuid_t uuid2){
+bool ble_uuid_equal(const ble_uuid_t uuid1, const ble_uuid_t uuid2){
     return memcmp(uuid1, uuid2, sizeof(ble_uuid_t)) == 0;
 }
 
@@ -135,7 +135,7 @@ bool ble_mac_equal(mac_addr_t mac1, mac_addr_t mac2){
     return memcmp(mac1, mac2, sizeof(mac_addr_t)) == 0;
 }
 
-static service_desc_t *ble_get_sig_service(ble_uuid_t uuid)
+static service_desc_t *ble_get_sig_service(const ble_uuid_t uuid)
 {
     service_desc_t *p;
 
@@ -150,7 +150,7 @@ static service_desc_t *ble_get_sig_service(ble_uuid_t uuid)
     return NULL;
 }
 
-static characteristic_desc_t *ble_get_sig_characteristic(ble_uuid_t uuid)
+static characteristic_desc_t *ble_get_sig_characteristic(const ble_uuid_t uuid)
 {
     characteristic_desc_t *p;
 
@@ -673,14 +673,14 @@ uint8_t *atochar(ble_uuid_t uuid, const char *data, size_t len, size_t *ret_len)
     return buf;
 }
 
-static const char *ble_get_sig_service_name(ble_uuid_t uuid)
+static const char *ble_get_sig_service_name(const ble_uuid_t uuid)
 {
     service_desc_t *p = ble_get_sig_service(uuid);
 
     return p ? p->name : NULL;
 }
 
-const char *ble_service_name_get(ble_uuid_t uuid)
+const char *ble_service_name_get(const ble_uuid_t uuid)
 {
     const char *name = config_ble_service_name_get(uuidtoa(uuid));
 
@@ -690,14 +690,14 @@ const char *ble_service_name_get(ble_uuid_t uuid)
     return ble_get_sig_service_name(uuid) ? : uuidtoa(uuid);
 }
 
-static const char *ble_get_sig_characteristic_name(ble_uuid_t uuid)
+static const char *ble_get_sig_characteristic_name(const ble_uuid_t uuid)
 {
     characteristic_desc_t *p = ble_get_sig_characteristic(uuid);
 
     return p ? p->name : NULL;
 }
 
-const char *ble_characteristic_name_get(ble_uuid_t uuid)
+const char *ble_characteristic_name_get(const ble_uuid_t uuid)
 {
     const char *name = config_ble_characteristic_name_get(uuidtoa(uuid));
 
@@ -852,7 +852,7 @@ ble_service_t *ble_device_service_add(ble_device_t *device, ble_uuid_t uuid)
     return service;
 }
 
-ble_service_t *ble_device_service_find(ble_device_t *device, ble_uuid_t uuid)
+ble_service_t *ble_device_service_find(ble_device_t *device, const ble_uuid_t uuid)
 {
     ble_service_t *cur;
 
@@ -904,7 +904,7 @@ ble_characteristic_t *ble_device_characteristic_add(ble_service_t *service,
 }
 
 ble_characteristic_t *ble_device_characteristic_find_by_uuid(
-    ble_service_t *service, ble_uuid_t uuid, uint8_t index)
+    ble_service_t *service, const ble_uuid_t uuid, uint8_t index)
 {
     ble_characteristic_t *cur;
 

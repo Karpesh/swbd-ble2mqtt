@@ -7,11 +7,65 @@
   },
   "mqtt": {
     "server": {
-      "host": "192.168.1.1",
-      "port": 1883
+      "host": "192.168.0.46",
+      "port": 1883,
+      "ssl": false,
+      "client_cert": null,
+      "client_key": null,
+      "server_cert": null,
+      "username": "client1",
+      "password": "client1",
+      "client_id": null
     },
     "publish": {
       "retain": true
     }
-  }
+  },
+  
+  "ble" : {
+    "services": {
+      "definitions": {
+        "0000ffe0-0000-1000-8000-00805f9b34fb": {
+          "name": "swbd"
+        }
+      }
+    },
+    "characteristics": {
+      "definitions": {
+        "0000ffe1-0000-1000-8000-00805f9b34fb": {
+          "name": "condition"
+        },
+        "0000ffe2-0000-1000-8000-00805f9b34fb": {
+          "name": "enable"
+        },
+        "0000ffe3-0000-1000-8000-00805f9b34fb": {
+          "name": "speed"
+        },
+        "0000ffe4-0000-1000-8000-00805f9b34fb": {
+          "name": "sensivity"
+        },
+        "0000ffe5-0000-1000-8000-00805f9b34fb": {
+          "name": "move_sens_enable"
+        },
+        "0000ffe6-0000-1000-8000-00805f9b34fb": {
+          "name": "hours"
+        },
+        "0000ffe7-0000-1000-8000-00805f9b34fb": {
+          "name": "minutes"
+        }
+      }
+    }
+  },
+  
+  "ble_mac": {
+    "whitelist": ["00:c1:38:??:??:??"]
+  },
+
+  "ble_name": {
+    "whitelist": ["SWBDdrv_mc5", "SWBDdrv_mc3", "SWBDdrv_mc2", "SWBDdrv_mc1", "SWBDdrv_mc0"]
+  },
+    "log": {
+      "host": "192.168.0.113",
+      "port": 5000
+    }
 }

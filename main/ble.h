@@ -26,7 +26,7 @@ typedef struct {
 /* Event callback types */
 typedef void (*ble_on_broadcaster_discovered_cb_t)(mac_addr_t mac,
     uint8_t *adv_data, size_t adv_data_len, int rssi, broadcaster_ops_t *ops);
-typedef void (*ble_on_device_discovered_cb_t)(mac_addr_t mac, int rssi);
+typedef void (*ble_on_device_discovered_cb_t)(mac_addr_t mac, char * name, size_t name_len, int rssi); // by MK
 typedef void (*ble_on_device_connected_cb_t)(mac_addr_t mac);
 typedef void (*ble_on_device_disconnected_cb_t)(mac_addr_t mac);
 typedef void (*ble_on_device_services_discovered_cb_t)(mac_addr_t mac);
@@ -66,8 +66,8 @@ int ble_foreach_characteristic(mac_addr_t mac,
 
 int ble_characteristic_read(mac_addr_t mac, ble_uuid_t service_uuid,
     ble_uuid_t characteristic_uuid, uint8_t index);
-int ble_characteristic_write(mac_addr_t mac, ble_uuid_t service_uuid,
-    ble_uuid_t characteristic_uuid, uint8_t index, const uint8_t *value,
+int ble_characteristic_write(mac_addr_t mac, const ble_uuid_t service_uuid,
+    const ble_uuid_t characteristic_uuid, uint8_t index, const uint8_t *value,
     size_t value_len);
 int ble_characteristic_notify_register(mac_addr_t mac, ble_uuid_t service_uuid,
     ble_uuid_t characteristic_uuid, uint8_t index);
@@ -79,5 +79,7 @@ ble_dev_t *ble_devices_list_get(size_t *number_of_devices);
 void ble_devices_list_free(ble_dev_t *devices);
 
 int ble_initialize(void);
+
+
 
 #endif
