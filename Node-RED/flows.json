@@ -1,0 +1,588 @@
+[
+    {
+        "id": "d82f8f164614e52f",
+        "type": "tab",
+        "label": "Поток 2",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "7e182fa96e23716f",
+        "type": "ui_switch",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Качание",
+        "tooltip": "",
+        "group": "75e868c8c93e8037",
+        "order": 1,
+        "width": "0",
+        "height": "0",
+        "passthru": false,
+        "decouple": "true",
+        "topic": "topic",
+        "topicType": "msg",
+        "style": "",
+        "onvalue": "1",
+        "onvalueType": "str",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "0",
+        "offvalueType": "str",
+        "officon": "",
+        "offcolor": "",
+        "animate": false,
+        "className": "",
+        "x": 860,
+        "y": 260,
+        "wires": [
+            [
+                "67cdd318b83737fa",
+                "ba7f081d337d065f",
+                "5934bbb9be9a9bcf"
+            ]
+        ]
+    },
+    {
+        "id": "67cdd318b83737fa",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/enable/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1260,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "5934bbb9be9a9bcf",
+        "type": "debug",
+        "z": "d82f8f164614e52f",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "topic",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1060,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "ad0f7b545ae42470",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/enable",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 420,
+        "y": 260,
+        "wires": [
+            [
+                "7e182fa96e23716f"
+            ]
+        ]
+    },
+    {
+        "id": "ba7f081d337d065f",
+        "type": "delay",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "10",
+        "timeoutUnits": "milliseconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 860,
+        "y": 340,
+        "wires": [
+            [
+                "7e182fa96e23716f"
+            ]
+        ]
+    },
+    {
+        "id": "85817c0b84aa549c",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/speed/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1260,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "8fb6a505c6a8e108",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/speed",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 420,
+        "y": 480,
+        "wires": [
+            [
+                "a41986b7d9653380",
+                "543a75fbaf76196c"
+            ]
+        ]
+    },
+    {
+        "id": "a41986b7d9653380",
+        "type": "ui_gauge",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "group": "75e868c8c93e8037",
+        "order": 2,
+        "width": "0",
+        "height": "0",
+        "gtype": "gage",
+        "title": "Мощность качания",
+        "label": "",
+        "format": "{{value}}",
+        "min": "1",
+        "max": "6",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 670,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "543a75fbaf76196c",
+        "type": "ui_slider",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Мощность",
+        "tooltip": "",
+        "group": "75e868c8c93e8037",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "outs": "end",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "1",
+        "max": "6",
+        "step": 1,
+        "className": "",
+        "x": 870,
+        "y": 480,
+        "wires": [
+            [
+                "85817c0b84aa549c"
+            ]
+        ]
+    },
+    {
+        "id": "100248514e98bd24",
+        "type": "ui_switch",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Датчик движения",
+        "tooltip": "",
+        "group": "4f2e15e96bd6c295",
+        "order": 2,
+        "width": "0",
+        "height": "0",
+        "passthru": false,
+        "decouple": "true",
+        "topic": "topic",
+        "topicType": "msg",
+        "style": "",
+        "onvalue": "1",
+        "onvalueType": "str",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "0",
+        "offvalueType": "str",
+        "officon": "",
+        "offcolor": "",
+        "animate": false,
+        "className": "",
+        "x": 850,
+        "y": 680,
+        "wires": [
+            [
+                "1602fc10eb636c20",
+                "68b38c05b3b7adec"
+            ]
+        ]
+    },
+    {
+        "id": "1602fc10eb636c20",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/move_sens_enable/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1300,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "e98672a3085b8ecd",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/move_sens_enable",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 460,
+        "y": 680,
+        "wires": [
+            [
+                "100248514e98bd24"
+            ]
+        ]
+    },
+    {
+        "id": "68b38c05b3b7adec",
+        "type": "delay",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "10",
+        "timeoutUnits": "milliseconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 860,
+        "y": 760,
+        "wires": [
+            [
+                "100248514e98bd24"
+            ]
+        ]
+    },
+    {
+        "id": "c2754d6dfede0d81",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/sensivity/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1260,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "0df7f1c0e0a92e91",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/sensivity",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 430,
+        "y": 880,
+        "wires": [
+            [
+                "aa556155a6716ad4"
+            ]
+        ]
+    },
+    {
+        "id": "aa556155a6716ad4",
+        "type": "ui_slider",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Датчик плача",
+        "tooltip": "",
+        "group": "4f2e15e96bd6c295",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "outs": "end",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "0",
+        "max": "5",
+        "step": 1,
+        "className": "",
+        "x": 880,
+        "y": 880,
+        "wires": [
+            [
+                "c2754d6dfede0d81"
+            ]
+        ]
+    },
+    {
+        "id": "adf8e93fbe40e071",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/hours/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1260,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "832df8195e1a8275",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/hours",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 420,
+        "y": 1000,
+        "wires": [
+            [
+                "e4ce8f4b58dc2cf6"
+            ]
+        ]
+    },
+    {
+        "id": "e4ce8f4b58dc2cf6",
+        "type": "ui_slider",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Часы",
+        "tooltip": "",
+        "group": "c2d27b8fed2de1ee",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "outs": "end",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "0",
+        "max": "23",
+        "step": 1,
+        "className": "",
+        "x": 850,
+        "y": 1000,
+        "wires": [
+            [
+                "adf8e93fbe40e071"
+            ]
+        ]
+    },
+    {
+        "id": "f69c49a4621e2331",
+        "type": "mqtt out",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/minutes/Set",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "text/plain",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "489094618c340eef",
+        "x": 1260,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "321350fa53113c92",
+        "type": "mqtt in",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "topic": "a4:c1:38:3d:e2:ff/swbd/minutes",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "489094618c340eef",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 430,
+        "y": 1100,
+        "wires": [
+            [
+                "e35e46b9a5e25ba3"
+            ]
+        ]
+    },
+    {
+        "id": "e35e46b9a5e25ba3",
+        "type": "ui_slider",
+        "z": "d82f8f164614e52f",
+        "name": "",
+        "label": "Минуты",
+        "tooltip": "",
+        "group": "c2d27b8fed2de1ee",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "outs": "end",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "0",
+        "max": "59",
+        "step": 1,
+        "className": "",
+        "x": 860,
+        "y": 1100,
+        "wires": [
+            [
+                "f69c49a4621e2331"
+            ]
+        ]
+    },
+    {
+        "id": "75e868c8c93e8037",
+        "type": "ui_group",
+        "name": "Запуск и мощность",
+        "tab": "368208cbd425cff6",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "489094618c340eef",
+        "type": "mqtt-broker",
+        "name": "homeassistant",
+        "broker": "192.168.0.46",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "4f2e15e96bd6c295",
+        "type": "ui_group",
+        "name": "Датчики",
+        "tab": "368208cbd425cff6",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "c2d27b8fed2de1ee",
+        "type": "ui_group",
+        "name": "Время качания",
+        "tab": "368208cbd425cff6",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "368208cbd425cff6",
+        "type": "ui_tab",
+        "name": "Устройство качания кроватки",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]

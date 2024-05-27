@@ -1,127 +1,126 @@
-# ESP32-BLE2MQTT
+# SWBD-BLE2MQTT
 
-This project is a BLE to MQTT bridge, i.e. it exposes BLE GATT characteristics
-as MQTT topics for bidirectional communication. It's developed for the ESP32 SoC
-and is based on [ESP-IDF](https://github.com/espressif/esp-idf) release v5.2.1.
-Note that using any other ESP-IDF version might not be stable or even compile.
+Шлюз BLE2MQTT, работающий на ESP32, который позволяет подключить устройства для качания кроватки "Паинька", "Соня", "Тихоня" и "Совушка" к MQTT-брокеру и, следовательно, к любой системе умного дома - Алисе от Яндекса, Марусе от VK, к Home Assistant, openHub, Node-RED и прочим, поддерживающим работу с MQTT-протоколом.
+В свою очередь, это дает возможность управлять устройством качания отовсюду, где есть Интернет; располагать на одном интерфейсе органы управления устройством качания и другими приборами в детской - камерой видеонаблюдения, шторами, освещением, мультимедиа-устройствами и пр.
 
-For example, if a device with a MAC address of `a0:e6:f8:50:72:53` exposes the
-[0000180f-0000-1000-8000-00805f9b34fb service](https://developer.bluetooth.org/gatt/services/Pages/ServiceViewer.aspx?u=org.bluetooth.service.battery_service.xml)
-(Battery Service) which includes the
-[00002a19-0000-1000-8000-00805f9b34fb characteristic](https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.battery_level.xml)
-(Battery Level), the `a0:e6:f8:50:72:53/BatteryService/BatteryLevel` MQTT topic
-is published with a value representing the battery level.
+Это форк  [вот этого проекта](https://github.com/shmuelzon/esp32-ble2mqtt).
 
-Characteristics supporting notifications will automatically be registered on and
-new values will be published once available. It's also possible to proactively
-issue a read request by publishing any value to the topic using the above format
-suffixed with '/Get'. Note that values are strings representing the
-characteristic values based on their definitions grabbed from
-http://bluetooth.org. For example, a battery level of 100% (0x64) will be sent
-as a string '100'.
+## Как работает шлюз
 
-In order to set a GATT value, publish a message to a writable characteristic
-using the above format suffixed with `/Set`. Payload should be of the same
-format described above and will be converted, when needed, before sending to the
-BLE peripheral.
+1. Шлюз подключается к заданной сети Wi-Fi и к заданному MQTT-брокеру.
+2. Шлюз сканирует находящиеся рядом с собой Bluetooth LE устройства и подключается к устройствам со следующими именами:
+* `SWBDdrv_mc1` - "Паинька"
+* `SWBDdrv_mc2` - "Соня"
+* `SWBDdrv_mc3` - "Тихоня"
+* `SWBDdrv_mc5` - "Совушка"
+3. При изменении параметров устройства качания (запущено качание или нет, мощности качания, чувствительности датчика плача, состояния датчика движения (включен или нет), времени качания) шлюз передает MQTT-брокеру сообщения о состоянии устройства. 
+4. При получении от MQTT-брокера сообщений, управляющих устройством качания, шлюз передает устройству качания соответствующую BLE-команду.
 
-In addition to the characteristic values, the BLE2MQTT devices also publish
-additional topics to help book-keeping:
-* `<Peripheral MAC address>/Connected` - With a payload of `true`/`false`
-  depicting if the peripheral is currently connected or not. Note that this
-  topic is monitored by the BLE2MQTT instance currently connected to the
-  peripheral so that if another instance publishes `false`, the current instance
-  will re-publish `true`
-* `<Peripheral MAC address>/Owner` - The name of the BLE2MQTT instance currently
-  connected to the peripheral, e.g. `BLE2MQTT-XXXX`, where `XXXX` are the last 2
-  octets of the ESP32's WiFi MAC address
-* `BLE2MQTT-XXX/Version` - The BLE2MQTT application version currently running
-* `BLE2MQTT-XXX/ConfigVersion` - The BLE2MQTT configuration version currently
-  loaded (MD5 hash of configuration file)
-* `BLE2MQTT-XXX/Uptime` - The uptime of the ESP32, in seconds, published every
-  minute
-* `BLE2MQTT-XXX/Status` - `Online` when running, `Offline` when powered off
-  (the latter is an LWT message)
+Таким образом, шлюз организует двустороннюю связь между устройством качания и MQTT-брокером. 
 
-## Broadcasters
+|Параметр|Топик управления|Топик состояния|Значения (строковый тип)|
+|-|--------|---|--|
+|Запущено ли качание|`<MAC>/swbd/enable`|`<MAC>/swbd/enable/Set`|`0`-не запущено, `1` - запущено|
+|Мощность качания|`<MAC>/swbd/speed`|`<MAC>/swbd/speed/Set`|`1`..`6`|
+|Чувствительнось датчика плача|`<MAC>/swbd/sensivity`|`<MAC>/swbd/sensivity/Set`|`0`..`5`, если `0`, то  датчик отключен|
+|Включен ли датчик движения|`<MAC>/swbd/move_sens_enable`|`<MAC>/swbd/move_sens_enable/Set`|`0`- отключен, `1` - включен|
+|Время качания (часы)|`<MAC>/swbd/hours`|`<MAC>/swbd/hours/Set`|`0`..`23`|
+|Время качания (минуты)|`<MAC>/swbd/minutes`|`<MAC>/swbd/minues/Set`|`0`..`59`|
 
-Broadcasters are non-connectable BLE devices that only send advertisements.
-This application supports publishing these advertisements over MQTT.
-For each broadcaster, at-least two topics are published:
-* `BLE2MQTT-XXXX/<Broadcaster MAC address>/Type` - The broadcaster type, e.g.
-  `iBeacon`
-* `BLE2MQTT-XXXX/<Broadcaster MAC address>/RSSI` - The RSSI value of the
-  received advertisement
+В приведенной таблице `<MAC>` - это MAC-адрес устройства качания. Например, чтобы запустить качание устройства с MAC-адресом `a4:c1:38:da:fd:00`, нужно записать в топик `a4:c1:38:da:fd:00/swbd/enable/Set` строковое значение `1`. Если всё произошло удачно и устройство запустилось, то шлюз запишет в топик `a4:c1:38:da:fd:00/swbd/enable` значение `1` (а также в другие типики - соответствующие параметры устройства качания).
 
-In addition, depending on the broadcaster type and payload, additional meta-data
-is published.
-* For iBeacon: `UUID`, `Major`, `Minor` and `Distance`
-* For Eddystone:
-  * `UID` frames: `Namespace`, `Instance` and `Distance`
-  * `URL` frames: `URL` and `Distance`
-  * `TLM` frames: `Voltage`, `Temperature`, `Count` and `Uptime`
-* For Xiaomi Mijia (MiBeacon) sensors: `MACAddress`, `MessageCounter`,
-  `Temperature`, `Humidity`, `Moisture`, `Formaldehyde`, `Illuminance`,
-  `Conductivity`, `Switch`, `Consumable`, `Smoke`, `Light`, `DoorClosed`, `Motion`,
-  `BatteryLevel`
-* For BeeWi Smart Door sensors: `Status` and `Battery`
-* For Xiaomi LYWSD03MMC Temperature Sensors running the ATC1441 firmware:
-  `MACAddress`, `MessageCounter`, `Temperature`, `Humidity`, `BatteryLevel`
-  and `BatteryVolts` (_See https://github.com/atc1441/ATC_MiThermometer_)
+## Как настроить готовый шлюз
 
-**Note:** Broadcaster topics are published without the retained flag regardless
-of what's defined in the configuration file.
+Купить готовый прошитый шлюз можно [здесь]().
 
-## Compiling
+При включении шлюз создаст точку доступа с именем `BLE2MQTT-XXX`. Нужно подключиться к этой точке доступа и ввести в адресную строку браузера IP-адрес шлюза `192.168.4.1`. Используя возможности веб-интерфейса, отредактировать [конфигурационный файл](#configuration): ввести название Wi-Fi сети, пароль к сети, адрес MQTT-брокера, порт MQTT-брокера и, если требуется, имя и пароль для подключения к брокеру. На этом настройка шлюза завершена, после презагрузки шлюз будет готов к работе.
 
-1. Install `ESP-IDF`
+Если файл конфигурации окажется синтаксически неверным, точка доступа появится при перезагрузке снова. 
 
-You will first need to install the
-[Espressif IoT Development Framework](https://github.com/espressif/esp-idf).
-The [Installation Instructions](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html)
-have all of the details. Make sure to follow ALL the steps, up to and including step 4 where you set up the tools and
-the `get_idf` alias.
+Если точка доступа при перезагрузке не появилась, но есть необходимость отредактировать файл конфигурации, можно открыть веб-интерфейс шлюза по IP-адресу, который можно узнать, например, с помощью веб-интерфейса роутера. Если же шлюз не подключился к роутеру (имя сети или пароль указаны неверно), то можно перевключить шлюз с зажатой кнопкой - и точка доступа снова появится.
 
-2. Download the repository and its dependencies:
+### Как узнать MAC-адрес устройства качания
+
+Можно воспользоваться одним из способов: 
+* С помощью любого MQTT-клиента, например, [MQTTX](https://mqttx.app), можно подключиться к MQTT-брокеру, подписаться на все его сообщения и посмотреть, какие сообщения приходят от устройства качания. Первая часть сообщения и есть MAC-адрес. Здесь же можно попробовать отправить сообщения устройству качания, и убедиться, что всё работает.
+* На веб-интерфейсе шлюза отображаются все подключенные к шлюзу устройства качания и их MAC-адреса.
+
+### Как подключить устройство качания к Алисе или Марусе
+
+Самый простой вариант - воспользоваться сервисом https://www.wqtt.ru. Это облачный MQTT-брокер c готовыми навыками Алисы и Маруси.
+
+### Как подключить устройство качания к Home Assistant
+
+Нужно настроить MQTT-интеграцию и в настройки MQTT добавить, например, следующее:
+
+```yaml
+- switch:
+      unique_id: swbd_enable
+      name: "Качание"
+      state_topic: "a4:c1:38:3d:e2:ff/swbd/enable"
+      command_topic: "a4:c1:38:3d:e2:ff/swbd/enable/Set"
+      payload_on: "1"
+      payload_off: "0"
+      state_on: "1"
+      state_off: "0"
+      optimistic: false
+      qos: 0
+      retain: true
+```
+Это запись создаст выключатель, который будет включать или отключать качание.
+
+### Как подключить устройство качания к Node-RED
+
+Пример: импортируем [файл](Node-RED/flows.json), меняем параметры подключения к MQTT-брокеру и МАС-адрес устройства качания. 
+
+![flows](Node-RED/flow.png)
+
+В результате получаем вот такую панель управления:
+
+![panel](Node-RED/panel.png)
+
+Буду признателен, если кто-нибудь пришлет пример получше.
+
+## Как самостоятельно изготовить шлюз
+
+Понадобится плата с модулем ESP32-WROOVER или ESP32-WROOM, таже подойдут платы на ESP32-C3 или ESP32-S3.
+
+### Компиляция
+
+1. Установка `ESP-IDF`
+
+Устанавливаем
+[Espressif IoT Development Framework](https://github.com/espressif/esp-idf)
+по инструкции [Installation Instructions](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html),
+там всё написано. Обязательно выполняем все шаги, включая шаг 4. 
+
+2. Загружаем репозиторий:
 
 ```bash
-git clone --recursive https://github.com/shmuelzon/esp32-ble2mqtt
+git clone --recursive https://github.com/Karpesh/swbd-ble2mqtt
 ```
 
-3. Modify the config.json and flash
+3. Модифицируем config.json и прошиваем плату
 
-Modify the [configuration file](#configuration) to fit your environment, build
-and flash (make sure to modify the serial device your ESP32 is connected to):
+Модифицируем [файл конфигурации](#configuration) - как минимум нужно прописать имя сети, пароль сети и параметры MQTT - адрес, порт, имя пользователя и пароль. Компилируем и прошиваем плату:
 
 ```bash
 idf.py build flash
 ```
 
-## Remote Logging
+4. Припаиваем кнопку к контактам GND и GPIO_NUM_13 (определена в файле [swbd.h](https://github.com/Karpesh/swbd-ble2mqtt/blob/737671ae9121cf41cecb8a3ef5f62494e72d5909/main/swbd.h#L9), при зажатой кнопке появляется точка доступа).
 
-If configured, the application can send the logs remotely via UDP to another
-host to allow receiving logs from remote devices without a serial connection.
-To receive these logs on your host, execute `idf.py remote-monitor`.
 
-## Configuration
+### Конфигурирование
 
-The configuration file provided in located at
-[data/config.json](data/config.json) in the repository. It contains all of the
-different configuration options.
+Конфигурационный файл находится здесь:
+[data/config.json](data/config.json). Он содержит все опции конфигурации.
+Для работы шлюза нужно изменить значения только в секциях `network` и `mqtt`. 
 
-The `network` section should contain either a `wifi` section or an `eth`
-section.  If case there are both, the `eth` section has preference over the
-`wifi` section.
-
-Optionally, the network section can contain a `hostname` which, if set,
-is used in MQTT subscriptions as well. In such case, relace `BLE2MQTT-XXX` in
-this documentation with the hostname you have set.
-
-The `wifi` section below includes the following entries:
+* В секции `wifi` задаем имя сети (вместо `MY_SSID`) и пароль (вместо `MY_PASSWORD`): 
 ```json
 {
   "network": {
-    "hostname": "MY_HOSTNAME",
     "wifi": {
       "ssid": "MY_SSID",
       "password": "MY_PASSWORD",
@@ -138,37 +137,8 @@ The `wifi` section below includes the following entries:
   }
 }
 ```
-* `ssid` - The WiFi SSID the ESP32 should connect to
-* `password` - The security password for the above network
-* `eap` - WPA-Enterprise configuration (for enterprise networks only)
-  * `method` - `TLS`, `PEAP` or `TTLS`
-  * `identity` - The EAP identity
-  * `ca_cert`, `client_cert`, `client_key` - Full path names, including a
-    leading slash (/), of the certificate/key file (in PEM format) stored under
-    the data folder
-  * `username`, `password` - EAP login credentials
 
-The `eth` section below includes the following entries:
-```json
-{
-  "network": {
-    "eth": {
-      "phy": "MY_ETH_PHY",
-      "phy_power_pin": -1
-    }
-  }
-}
-```
-* `phy` - The PHY chip connected to ESP32 RMII, one of:
-  * `IP101`
-  * `RTL8201`
-  * `LAN8720`
-  * `DP83848`
-* `phy_power_pin` - Some ESP32 Ethernet modules such as the Olimex ESP32-POE require a GPIO pin to be set high in order to enable the PHY. Omitting this configuration or setting it to -1 will disable this.
-
-_Note: Defining the `eth` section will disable WiFi_
-
-The `mqtt` section below includes the following entries:
+* В секции `mqtt` задаем адрес MQTT-брокера (вместо `192.168.1.1`) и порт (вместо `1883`). Также, если необходимо, нужно указать имя пользователя и пароль.
 ```json
 {
   "mqtt": {
@@ -186,183 +156,10 @@ The `mqtt` section below includes the following entries:
     "publish": {
       "qos": 0,
       "retain": true
-    },
-    "topics" :{
-      "prefix": "",
-      "get_suffix": "/Get",
-      "set_suffix": "/Set"
     }
   }
 }
 ```
-* `server` - MQTT connection parameters
-  * `host` - Host name or IP address of the MQTT broker
-  * `port` - TCP port of the MQTT broker. If not specificed will default to
-    1883 or 8883, depending on SSL configuration
-  * `client_cert`, `client_key`, `server_cert` - Full path names, including a
-    leading slash (/), of the certificate/key file (in PEM format) stored under
-    the data folder. For example, if a certificate file is placed at
-    `data/certs/my_cert.pem`, the value stored in the configuration should be
-    `/certs/my_cert.pem`
-  * `username`, `password` - MQTT login credentials
-  * `client_id` - The MQTT client ID
-* `publish` - Configuration for publishing topics
-* `topics`
-  * `prefix` - Which prefix should be added to all MQTT value topics. OTA
-    related topics are already prefixed and are not affected by this value
-  * `get_suffix` - Which suffix should be added to the MQTT value topic in order
-    to issue a read request from the characteristic
-  * `set_suffix` - Which suffix should be added to the MQTT value topic in order
-    to write a new value to the characteristic
 
-The `ble` section of the configuration file includes the following default
-configuration:
-```json
-{
-  "ble": {
-    "//Optional: 'whitelist' or 'blacklist'": [],
-    "services": {
-      "definitions": {},
-      "//Optional: 'whitelist' or 'blacklist'": []
-    },
-    "characteristics": {
-      "definitions": {},
-      "//Optional: 'whitelist' or 'blacklist'": []
-    },
-    "passkeys": {},
-    "mikeys": {}
-  }
-}
-```
-* `whitelist`/`blacklist` - An array of MAC addresses of devices. If `whitelist`
-  is used, only devices with a MAC address matching one of the entries will be
-  connected while if `blacklist` is used, only devices that do not match any
-  entry will be connected. It's possible to use the wildcard character `?` to
-  denote any value for a nibble.
+* Остальное не меняем. Более подробно о настройках конфигурационного файла можно прочитать в описании [оригинального проекта](shmuelzon/esp32-ble2mqtt).
 
-    ```json
-    "whitelist": [
-      "aa:bb:cc:dd:ee:ff",
-      "00:11:22:??:??:??"
-    ]
-    ```
-* `services` - Add additional services or override a existing definitions to the
-  ones grabbed automatically during build from http://www.bluetooth.org. Each
-  service can include a `name` field which will be used in the MQTT topic
-  instead of its UUID. In addition, it's possible to define a white/black list
-  for discovered services. The white/black list UUIDs may contain the wildcard
-  character `?` to denote any value for a nibble. For example:
-
-    ```json
-    "services": {
-      "definitions": {
-        "00002f00-0000-1000-8000-00805f9b34fb": {
-          "name": "Relay Service"
-        }
-      },
-      "blacklist": [
-        "0000180a-0000-1000-8000-00805f9b34fb",
-        "0000ffff-????-????-????-????????????"
-      ]
-    }
-    ```
-* `characteristics` - Add additional characteristics or override existing
-  definitions to the ones grabbed automatically during build from
-  http://www.bluetooth.org. Each characteristic can include a `name` field which
-  will be used in the MQTT topic instead of its UUID and a `types` array
-  defining how to parse the byte array reflecting the characteristic's value.
-  In addition, it's possible to define a white/black list for discovered
-  characteristics. The white/black list UUIDs may contain the wildcard character
-  `?` to denote any value for a nibble. For example:
-
-    ```json
-    "characteristics": {
-      "definitions": {
-        "00002f01-0000-1000-8000-00805f9b34fb": {
-          "name": "Relay State",
-          "types": [
-            "boolean"
-          ]
-        }
-      },
-      "blacklist": [
-        "00002a29-0000-1000-8000-00805f9b34fb",
-        "0000ffff-????-????-????-????????????"
-      ]
-    }
-    ```
-* `passkeys` - An object containing the passkey (number 000000~999999) that
-  should be used for out-of-band authorization. Each entry is the MAC address of
-  the BLE device and the value is the passkey to use. It's possible to use the
-  wildcard character `?` to denote any value for a nibble.
-
-    ```json
-    "passkeys": {
-      "aa:bb:cc:dd:ee:ff": 0,
-      "00:11:22:??:??:??": 123456
-    }
-    ```
-* `mikeys` - An object containing "bind keys" for Xiaomi MiBeacon devices.
-  Each entry is the MAC address of the BLE device and the value is the key to use.
-  Keys are only required for some devices and can be obtained using
-  [these methods](https://github.com/custom-components/ble_monitor/blob/master/faq.md#my-sensors-ble-advertisements-are-encrypted-how-can-i-get-the-key).
-
-    ```json
-    "mikeys": {
-      "e4:aa:ec:xx:xx:xx": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "a4:c1:38:xx:xx:xx": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    }
-    ```
-
-The optional `log` section below includes the following entries:
-```json
-{
-  "log": {
-    "host": "224.0.0.200",
-    "port": 5000
-  }
-}
-```
-* `host` - The hostname or IP address to send the logs to. In case of an IP
-  address, this may be a unicast, broadcast or multicast address
-* `port` - The destination UDP port
-
-## OTA
-
-It is possible to upgrade both firmware and configuration file over-the-air once
-an initial version was flashed via serial interface. To do so, execute:
-`idf.py upload` or `idf.py upload-config` accordingly.
-The above will upgrade all BLE2MQTT devices connected to the MQTT broker defined
-in the configuration file. It is also possible to upgrade a specific device by
-adding the `OTA_TARGET` variable to the above command set to the host name of
-the requested device, e.g.:
-```bash
-OTA_TARGET=BLE2MQTT-470C idf.py upload
-```
-
-Note: In order to avoid unneeded upgrades, there is a mechanism in place to
-compare the new version with the one that resides on the flash. For the firmware
-image it's based on the git tag and for the configuration file it's an MD5 hash
-of its contents. In order to force an upgrade regardless of the currently
-installed version, run `idf.py force-upload` or `idf.py force-upload-config`
-respectively.
-
-## Board Compatibility
-The `sdkconfig.defaults` included in this project covers common configurations.
-
-### Olimex ESP32-POE
-A number of minor changes are required to support this board:
-* Set the `eth` section as follows:
-  ```json
-  {
-    "network": {
-      "eth": {
-        "phy": "LAN8720",
-        "phy_power_pin": 12
-      }
-    }
-  }
-  ```
-* Run `idf.py menuconfig` and modify the Ethernet configuration to:
-  * RMII_CLK_OUTPUT=y
-  * RMII_CLK_OUT_GPIO=17

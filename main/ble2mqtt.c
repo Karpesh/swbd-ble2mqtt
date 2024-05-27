@@ -21,6 +21,7 @@
 #include <freertos/task.h>
 #include <freertos/timers.h>
 #include <string.h>
+#include <driver/gpio.h>
 
 #include "swbd.h"
 
@@ -1324,8 +1325,15 @@ void app_main()
     /* Start BLE2MQTT task */
     ESP_ERROR_CHECK(start_ble2mqtt_task());
 
+    /* кнопка */
+    gpio_reset_pin(AP_BUTTON);
+    // Настраиваем вывод AP_BUTTON на вход с подтяжкой к +3.3
+    gpio_set_direction(AP_BUTTON, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(AP_BUTTON, GPIO_PULLUP_ONLY);
+    int isPressed = !gpio_get_level(AP_BUTTON);
+
     /* Failed to load configuration or it wasn't set, create access point */
-    if (config_failed || !strcmp(config_network_wifi_ssid_get() ? : "", "MY_SSID"))
+    if (isPressed || config_failed || !strcmp(config_network_wifi_ssid_get() ? : "", "MY_SSID"))
     {
         wifi_start_ap(device_name_get(), NULL);
         return;

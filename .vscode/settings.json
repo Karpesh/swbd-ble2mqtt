@@ -7,6 +7,7 @@
     ],
     "idf.flashType": "UART",
     "files.associations": {
-        "ble.h": "c"
+        "ble.h": "c",
+        "swbd.h": "c"
     }
 }

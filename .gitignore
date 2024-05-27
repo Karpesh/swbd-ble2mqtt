@@ -1,6 +1,8 @@
 # Outputs
 build/
 
+data/
+
 # Build depdendencies
 dependencies.lock
 managed_components

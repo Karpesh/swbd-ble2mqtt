@@ -1,8 +1,8 @@
 {
   "network": {
     "wifi": {
-      "ssid": "MY_SSID",
-      "password": "MY_PASSWORD"
+      "ssid": "Is74",
+      "password": "afternoon"
     }
   },
   "mqtt": {
