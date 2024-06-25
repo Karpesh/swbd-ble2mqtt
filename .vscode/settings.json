@@ -1,9 +1,9 @@
 {
     "cmake.configureOnOpen": true,
-    "idf.portWin": "COM7",
-    "idf.adapterTargetName": "esp32",
+    "idf.portWin": "COM5",
+    "idf.adapterTargetName": "esp32c3",
     "idf.openOcdConfigs": [
-        "board/esp32-wrover-kit-3.3v.cfg"
+        "board/esp32c3-bridge.cfg"
     ],
     "idf.flashType": "UART",
     "files.associations": {

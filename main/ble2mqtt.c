@@ -932,9 +932,13 @@ static int start_ble2mqtt_task(void)
 
     if (!(event_queue = xQueueCreate(10, sizeof(event_t *))))
         return -1;
-
+#if CONFIG_IDF_TARGET_ESP32C3==1
+    if (xTaskCreatePinnedToCore(ble2mqtt_task, "ble2mqtt_task", 4096, NULL, 5,
+        NULL, 0) != pdPASS) /////////////////////////////////////////////////////////???
+#else         
     if (xTaskCreatePinnedToCore(ble2mqtt_task, "ble2mqtt_task", 4096, NULL, 5,
         NULL, 1) != pdPASS)
+#endif
     {
         return -1;
     }
@@ -1331,6 +1335,13 @@ void app_main()
     gpio_set_direction(AP_BUTTON, GPIO_MODE_INPUT);
     gpio_set_pull_mode(AP_BUTTON, GPIO_PULLUP_ONLY);
     int isPressed = !gpio_get_level(AP_BUTTON);
+
+    /* светодиод */
+    gpio_reset_pin(BLE_CONNECTED_LED);
+    gpio_set_direction(BLE_CONNECTED_LED, GPIO_MODE_OUTPUT_OD);
+    //gpio_set_pull_mode(BLE_CONNECTED_LED, GPIO_FLOATING);
+    gpio_set_level(BLE_CONNECTED_LED, 1); // отключаем
+
 
     /* Failed to load configuration or it wasn't set, create access point */
     if (isPressed || config_failed || !strcmp(config_network_wifi_ssid_get() ? : "", "MY_SSID"))

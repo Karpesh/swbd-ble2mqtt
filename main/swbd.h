@@ -6,7 +6,8 @@
 
 #define HI(x) ((x)>>8)
 #define LO(x) ((x)& 0xFF)
-#define AP_BUTTON GPIO_NUM_13
+#define AP_BUTTON GPIO_NUM_4f
+#define BLE_CONNECTED_LED GPIO_NUM_8
 
 uint8_t chsum(uint8_t array[6]);
 uint8_t get_swbd_speed(uint8_t array[6]);

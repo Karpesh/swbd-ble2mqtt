@@ -1,5 +1,6 @@
 {
   "network": {
+    "hostname": "swbd",
     "wifi": {
       "ssid": "MY_SSID",
       "password": "MY_PASSWORD"

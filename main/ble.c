@@ -13,6 +13,9 @@
 #include <freertos/semphr.h>
 #include <endian.h>
 #include <string.h>
+#include <driver/gpio.h>
+
+#include "swbd.h"
 
 /* Constants */
 #define INVALID_HANDLE 0
@@ -867,7 +870,8 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
         /* Configure MTU */
         ESP_ERROR_CHECK(esp_ble_gattc_send_mtu_req(gattc_if,
             param->open.conn_id));
-
+        
+        gpio_set_level(BLE_CONNECTED_LED, 0); // включаем
         break;
     }
     case ESP_GATTC_CLOSE_EVT:
@@ -883,6 +887,8 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
         xSemaphoreTakeRecursive(devices_list_semaphore, portMAX_DELAY);
         ble_device_remove_by_mac(&devices_list, param->close.remote_bda);
         xSemaphoreGiveRecursive(devices_list_semaphore);
+
+        gpio_set_level(BLE_CONNECTED_LED, 1); // отключаем
         break;
     case ESP_GATTC_CFG_MTU_EVT:
         if (param->cfg_mtu.status != ESP_GATT_OK)
@@ -1057,6 +1063,11 @@ int ble_initialize(void)
     ESP_ERROR_CHECK(esp_bluedroid_enable());
     ESP_ERROR_CHECK(esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT,
         ESP_PWR_LVL_P9));
+#if CONFIG_IDF_TARGET_ESP32C3==1
+    esp_bd_addr_t mac = {
+     0xD4, 0x5E, 0xEC, 0x0E, 0x7D, 0x9E};
+    ESP_ERROR_CHECK(esp_ble_gap_set_rand_addr(mac)); ////////////////////////////////////////???    
+#endif    
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(gap_cb));
     ESP_ERROR_CHECK(esp_ble_gap_config_local_privacy(true));
     ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_gattc_cb));
