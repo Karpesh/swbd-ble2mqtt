@@ -110,7 +110,7 @@ git clone --recursive https://github.com/Karpesh/swbd-ble2mqtt
 idf.py build flash
 ```
 
-4. Припаиваем кнопку к контактам GND и GPIO_NUM_13 (определена в файле [swbd.h](https://github.com/Karpesh/swbd-ble2mqtt/blob/737671ae9121cf41cecb8a3ef5f62494e72d5909/main/swbd.h#L9), при включении с зажатой кнопкой появляется точка доступа).
+4. Припаиваем кнопку к контактам GND и GPIO_NUM_13 (определена в файле [swbd.h](https://github.com/Karpesh/swbd-ble2mqtt/main/swbd.h#L9), при включении с зажатой кнопкой появляется точка доступа).
 
 
 ### Конфигурирование
