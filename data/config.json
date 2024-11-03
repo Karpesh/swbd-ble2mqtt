@@ -8,7 +8,7 @@
   },
   "mqtt": {
     "server": {
-      "host": "192.168.0.46",
+      "host": "homeassistant.local",
       "port": 1883,
       "ssl": false,
       "client_cert": null,
