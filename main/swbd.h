@@ -6,7 +6,7 @@
 
 #define HI(x) ((x)>>8)
 #define LO(x) ((x)& 0xFF)
-#define AP_BUTTON GPIO_NUM_4f
+#define AP_BUTTON GPIO_NUM_4
 #define BLE_CONNECTED_LED GPIO_NUM_8
 
 uint8_t chsum(uint8_t array[6]);
